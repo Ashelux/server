@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}命令历史 - FRP设备控制{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>📋 命令历史 - {{ device_name }}</h3>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-sm">返回</a>
+</div>
+
+<div class="card p-3">
+    <table class="table table-hover align-middle mb-0">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>命令</th>
+                <th>状态</th>
+                <th>结果</th>
+                <th>创建时间</th>
+                <th>执行时间</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for cmd in commands %}
+            <tr>
+                <td>{{ cmd.id }}</td>
+                <td><code>{{ cmd.command }}</code></td>
+                <td>
+                    {% if cmd.status == 0 %}
+                    <span class="badge bg-warning">待执行</span>
+                    {% elif cmd.status == 1 %}
+                    <span class="badge bg-info">已下发</span>
+                    {% elif cmd.status == 2 %}
+                    <span class="badge bg-success">完成</span>
+                    {% else %}
+                    <span class="badge bg-danger">失败</span>
+                    {% endif %}
+                </td>
+                <td class="small text-muted" style="max-width:300px;word-break:break-all;">{{ cmd.result or '-' }}</td>
+                <td class="small text-muted">{{ cmd.created_at.strftime('%Y-%m-%d %H:%M') if cmd.created_at else '-' }}</td>
+                <td class="small text-muted">{{ cmd.executed_at.strftime('%Y-%m-%d %H:%M') if cmd.executed_at else '-' }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" class="text-center text-muted">暂无命令记录</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

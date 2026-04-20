@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}账号管理 - FRP设备控制{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>👤 APP账号管理</h3>
+    <span class="text-muted">当前用户: {{ username }}</span>
+</div>
+
+<div class="card p-3 mb-4">
+    <h5 class="mb-3">添加新账号</h5>
+    <form method="POST" action="{{ url_for('add_account') }}" class="row g-2">
+        <div class="col-md-3">
+            <input type="text" name="username" class="form-control" placeholder="用户名" required>
+        </div>
+        <div class="col-md-3">
+            <input type="password" name="password" class="form-control" placeholder="密码" required>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary w-100">添加账号</button>
+        </div>
+    </form>
+</div>
+
+<div class="card p-3">
+    <table class="table table-hover align-middle mb-0">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>用户名</th>
+                <th>分配端口</th>
+                <th>状态</th>
+                <th>创建时间</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for acc in accounts %}
+            <tr>
+                <td>{{ acc.id }}</td>
+                <td>{{ acc.username }}</td>
+                <td><span class="badge bg-dark">{{ acc.assigned_port }}</span></td>
+                <td>
+                    <span class="badge bg-{{ 'success' if acc.is_active else 'secondary' }}">
+                        {{ '启用' if acc.is_active else '禁用' }}
+                    </span>
+                </td>
+                <td class="small text-muted">{{ acc.created_at.strftime('%Y-%m-%d %H:%M') if acc.created_at else '-' }}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
+                            data-bs-target="#editModal{{ acc.id }}">编辑</button>
+                    <form method="POST" action="{{ url_for('delete_account', aid=acc.id) }}"
+                          class="d-inline" onsubmit="return confirm('确定删除该账号？')">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">删除</button>
+                    </form>
+                </td>
+            </tr>
+
+            <!-- Edit Modal -->
+            <div class="modal fade" id="editModal{{ acc.id }}" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">编辑账号 - {{ acc.username }}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <form method="POST" action="{{ url_for('edit_account', aid=acc.id) }}">
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label class="form-label">新密码（留空则不修改）</label>
+                                    <input type="password" name="password" class="form-control">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">状态</label>
+                                    <select name="is_active" class="form-select">
+                                        <option value="1" {{ 'selected' if acc.is_active else '' }}>启用</option>
+                                        <option value="0" {{ 'selected' if not acc.is_active else '' }}>禁用</option>
+                                    </select>
+                                </div>
+                                <div class="small text-muted">
+                                    当前分配端口: <strong>{{ acc.assigned_port }}</strong>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                                <button type="submit" class="btn btn-primary">保存</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

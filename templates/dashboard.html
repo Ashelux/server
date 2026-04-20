@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}设备监控 - FRP设备控制{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>📊 设备监控</h3>
+    <span class="text-muted">当前用户: {{ username }}</span>
+</div>
+
+<div class="card p-3 mb-4">
+    <div class="row text-center">
+        <div class="col">
+            <div class="fs-4 fw-bold text-success" id="online-count">-</div>
+            <div class="small text-muted">在线设备</div>
+        </div>
+        <div class="col">
+            <div class="fs-4 fw-bold text-danger" id="offline-count">-</div>
+            <div class="small text-muted">离线设备</div>
+        </div>
+        <div class="col">
+            <div class="fs-4 fw-bold text-primary" id="total-count">-</div>
+            <div class="small text-muted">设备总数</div>
+        </div>
+    </div>
+</div>
+
+<div class="card p-3">
+    <table class="table table-hover align-middle mb-0">
+        <thead>
+            <tr>
+                <th>设备ID</th>
+                <th>设备名称</th>
+                <th>APP账号</th>
+                <th>公网端口</th>
+                <th>frpc状态</th>
+                <th>最后心跳</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody id="device-table-body">
+            <tr><td colspan="7" class="text-center text-muted">加载中...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Send Command Modal -->
+<div class="modal fade" id="cmdModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">发送ADB命令</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('send_command') }}">
+                <div class="modal-body">
+                    <input type="hidden" name="device_id" id="cmd-device-id">
+                    <p class="mb-2">设备: <strong id="cmd-device-name"></strong></p>
+                    <div class="mb-3">
+                        <label class="form-label">ADB命令</label>
+                        <input type="text" name="command" class="form-control" placeholder="shell pm list packages" required>
+                    </div>
+                    <p class="small text-muted mb-0">命令将发送到手机，下次心跳时自动执行并回传结果。</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">发送</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function loadStatus() {
+    fetch("{{ url_for('api_status') }}")
+        .then(r => r.json())
+        .then(resp => {
+            if (resp.code !== 200) return;
+            const data = resp.data;
+            document.getElementById('online-count').textContent = data.filter(d => d.is_online).length;
+            document.getElementById('offline-count').textContent = data.filter(d => !d.is_online).length;
+            document.getElementById('total-count').textContent = data.length;
+
+            const tbody = document.getElementById('device-table-body');
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">暂无设备</td></tr>';
+                return;
+            }
+            tbody.innerHTML = data.map(d => `
+                <tr>
+                    <td><code>${d.device_id}</code></td>
+                    <td>${d.device_name}</td>
+                    <td>${d.username}</td>
+                    <td><span class="badge bg-dark">${d.assigned_port}</span></td>
+                    <td>
+                        <span class="${d.is_online ? 'status-online' : 'status-offline'}">
+                            ${d.is_online ? '● 在线' : '○ 离线'}
+                        </span>
+                    </td>
+                    <td class="small text-muted">${d.last_heartbeat || '-'}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" onclick="showCmdModal('${d.device_id}', '${d.device_name}')">
+                            发命令
+                        </button>
+                        <a href="{{ url_for('command_history', device_id='') }}/${d.device_id}" class="btn btn-sm btn-outline-secondary">
+                            历史
+                        </a>
+                    </td>
+                </tr>
+            `).join('');
+        });
+}
+
+function showCmdModal(deviceId, deviceName) {
+    document.getElementById('cmd-device-id').value = deviceId;
+    document.getElementById('cmd-device-name').textContent = deviceName;
+    new bootstrap.Modal(document.getElementById('cmdModal')).show();
+}
+
+loadStatus();
+setInterval(loadStatus, 5000);
+</script>
+{% endblock %}
