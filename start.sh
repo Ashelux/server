@@ -1,4 +1,7 @@
 #!/bin/bash
+# FRP 手机控制中心 - 启动脚本
+# 注意：frps 需要单独启动，本脚本只启动 Flask Web 服务
+
 cd /root/phone_control
 source /root/miniconda3/etc/profile.d/conda.sh
 conda activate phone_control
@@ -6,14 +9,9 @@ conda activate phone_control
 # Initialize DB if needed (safe to run multiple times)
 python init_db.py
 
-# Kill existing processes
+# Kill existing Flask processes
 pkill -f "gunicorn.*app:app" 2>/dev/null || true
-pkill -f "monitor.py" 2>/dev/null || true
 sleep 1
 
-# Start monitor (background) - use full path to python
-nohup /root/miniconda3/envs/phone_control/bin/python /root/phone_control/monitor.py >> /root/phone_control/monitor.log 2>&1 &
-echo "[start] Monitor PID: $!"
-
-# Start web server
+# Start Flask web server
 exec /root/miniconda3/envs/phone_control/bin/gunicorn -w 4 -b 0.0.0.0:10086 --timeout 120 app:app

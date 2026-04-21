@@ -11,8 +11,8 @@ Python Flask 服务器，为 Android 手机 APP 提供：
 
 - Python 3.10+
 - MySQL 5.7+ 或 MariaDB 10.3+
-- frps v0.58+ 已运行（端口 7000，dashboard 端口 7500）
-- 服务器已开放端口：10086（Flask）、7500（frps dashboard）
+- **frps v0.58+ 独立部署**（端口 7000，dashboard 端口 7500）— frps 是独立进程，需要单独安装配置
+- 服务器已开放端口：10086（Flask）、7000（frps）、7500（frps dashboard）
 
 ---
 
