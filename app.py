@@ -156,14 +156,34 @@ def command_history(device_id):
 @app.route("/admin/api/status")
 @login_required
 def api_status():
+    # 直接从 frps dashboard API 获取实时状态，不依赖本地数据库
+    import base64, requests
+    FRPS_URL = settings.cfg.FRPS_DASHBOARD_URL
+    creds = base64.b64encode(
+        f"{settings.cfg.FRPS_DASHBOARD_USER}:{settings.cfg.FRPS_DASHBOARD_PASS}".encode()
+    ).decode()
+    headers = {"Authorization": f"Basic {creds}"}
+
+    port_status = {}
+    try:
+        resp = requests.get(f"{FRPS_URL}/api/proxy/tcp", headers=headers, timeout=5)
+        if resp.status_code == 200:
+            for p in resp.json().get("proxies", []):
+                conf = p.get("conf") or {}
+                rport = conf.get("remotePort")
+                if rport:
+                    port_status[rport] = p.get("status", "offline")
+    except Exception as e:
+        print(f"[api_status] frps API error: {e}")
+
     connections = DeviceConnection.query.order_by(DeviceConnection.last_heartbeat.desc()).all()
     data = [{
         "device_id": c.device_id,
         "device_name": c.device_name,
         "username": c.account.username if c.account else "",
         "assigned_port": c.account.assigned_port if c.account else 0,
-        "is_online": c.is_online,
-        "frpc_status": c.frpc_status,
+        "is_online": port_status.get(c.account.assigned_port, "offline") == "online",
+        "frpc_status": port_status.get(c.account.assigned_port, "offline"),
         "last_heartbeat": c.last_heartbeat.strftime("%Y-%m-%d %H:%M:%S") if c.last_heartbeat else "",
     } for c in connections]
     return jsonify({"code": 200, "data": data})
@@ -228,7 +248,7 @@ def api_heartbeat():
     if not conn:
         return jsonify({"code": 404, "msg": "设备未注册"})
 
-    conn.last_heartbeat = datetime.utcnow()
+    conn.last_heartbeat = datetime.now()
     db.session.commit()
     return jsonify({"code": 200, "msg": "OK"})
 
@@ -291,7 +311,7 @@ def api_report_result():
 
     cmd.result = result
     cmd.status = status
-    cmd.executed_at = datetime.utcnow()
+    cmd.executed_at = datetime.now()
     db.session.commit()
     return jsonify({"code": 200, "msg": "OK"})
 
