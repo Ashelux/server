@@ -39,15 +39,15 @@ FLUSH PRIVILEGES;
 编辑 `settings.py`，修改以下配置：
 
 ```python
-DB_URI = "mysql+pymysql://root:你的密码@localhost:3306/phone_control"
+# MySQL
+MYSQL_PASSWORD = "你的密码"
+
+# frps（自动下载二进制、自动启动）
 FRPS_ADDR = "你的服务器公网IP"
 FRPS_PORT = 7000
 FRPS_TOKEN = "frp_auth_token"
-FRPS_DASHBOARD_URL = "http://127.0.0.1:7500"
 FRPS_DASHBOARD_USER = "admin"
 FRPS_DASHBOARD_PASS = "dashboard密码"
-PORT_RANGE_START = 20000
-PORT_RANGE_END = 20499
 ```
 
 ### 4. 安装依赖
@@ -56,41 +56,22 @@ PORT_RANGE_END = 20499
 pip install -r requirements.txt
 ```
 
-### 5. 初始化数据库
+### 5. 一键启动
 
 ```bash
-python init_db.py
+bash start.sh
 ```
+
+脚本自动完成：
+- 初始化数据库
+- 下载 frps 二进制（首次）
+- 生成 frps.toml 配置文件
+- 启动 frps 和 Flask
+- frps 和 Flask 一起运行
+
+**停止服务**：`bash start.sh --stop`
 
 默认管理员账号：`admin` / `admin123`
-
-### 6. 配置 frps
-
-参考 `frps.toml`：
-
-```toml
-bindPort = 7000
-auth.token = "frp_auth_token"
-
-webServer.addr = "127.0.0.1"
-webServer.port = 7500
-webServer.user = "admin"
-webServer.password = "dashboard密码"
-
-allowPorts = [{ start = 20000, end = 20499 }]
-transport.heartbeatTimeout = 90
-transport.maxPoolCount = 600
-```
-
-### 7. 启动服务
-
-```bash
-# 启动 Flask（生产环境用 gunicorn）
-gunicorn -w 4 -b 0.0.0.0:10086 --timeout 120 app:app
-
-# 或用后台运行
-nohup gunicorn -w 4 -b 0.0.0.0:10086 --timeout 120 app:app >> gunicorn.log 2>&1 &
-```
 
 ---
 
@@ -100,11 +81,10 @@ nohup gunicorn -w 4 -b 0.0.0.0:10086 --timeout 120 app:app >> gunicorn.log 2>&1 
 server/
 ├── app.py              # Flask 主应用
 ├── models.py           # SQLAlchemy 数据模型
-├── settings.py         # 配置文件
+├── settings.py         # 配置文件（含 frps 自动启动逻辑）
 ├── init_db.py         # 数据库初始化
-├── monitor.py         # frps 状态监控（独立进程，可选）
 ├── requirements.txt   # Python 依赖
-├── start.sh           # 启动脚本
+├── start.sh           # 一键启动脚本
 └── templates/         # HTML 模板
     ├── base.html
     ├── login.html
